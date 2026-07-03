@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      // Safeguard window.fetch to prevent errors in sandboxed iframe environments where fetch has only a getter.
+      // This ensures that libraries (such as formdata-polyfill) attempting to override or patch fetch can do so without throwing.
+      (function() {
+        try {
+          // 1. Ensure FormData has keys iterator to prevent formdata-polyfill from running if possible
+          if (typeof window !== 'undefined') {
+            if (typeof window.FormData !== 'undefined' && !window.FormData.prototype.keys) {
+              window.FormData.prototype.keys = function() {
+                return [].keys();
+              };
+            }
+          }
+
+          // 2. Safeguard fetch with a getter and setter on window and its prototypes
+          if (window.fetch) {
+            let currentFetch = window.fetch;
+            const getter = function() { return currentFetch; };
+            const setter = function(newValue) { currentFetch = newValue; };
+
+            const targets = [window, Object.getPrototypeOf(window), window.Window ? window.Window.prototype : null].filter(Boolean);
+            
+            for (const target of targets) {
+              try {
+                const desc = Object.getOwnPropertyDescriptor(target, 'fetch');
+                if (!desc || desc.configurable) {
+                  Object.defineProperty(target, 'fetch', {
+                    get: getter,
+                    set: setter,
+                    configurable: true,
+                    enumerable: true
+                  });
+                }
+              } catch (e) {
+                // Ignore descriptor failures for individual targets and continue
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Safeguard for window.fetch failed to initialize:", e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

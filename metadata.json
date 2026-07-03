@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Personal Blog Template",
+  "description": "A stunning personal blog designed in the signature high-end Plus UI Blogger theme style. Features a left sidebar, real-time clock, local bookmarking system, and dark/light modes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

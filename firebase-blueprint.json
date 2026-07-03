@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "comment": {
+      "title": "Comment",
+      "description": "User feedback on a blog post",
+      "type": "object",
+      "properties": {
+        "articleId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["articleId", "authorName", "content", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}/comments/{commentId}": {
+      "schema": "comment",
+      "description": "Comments for a specific article"
+    }
+  }
+}
