@@ -1,23 +1,13 @@
 import { useState, useEffect } from "react";
-import { Settings as SettingsIcon, Database, Trash2, Moon, Sun, CheckCircle, User, Upload, Sparkles, Image as ImageIcon, Video, Palette, Grid, Sliders } from "lucide-react";
+import { Settings as SettingsIcon, Database, Trash2, Moon, Sun, CheckCircle, Upload, Sparkles, Image as ImageIcon, Video, Palette, Grid, Sliders } from "lucide-react";
 import { useDarkMode } from "../hooks/useDarkMode";
-import { useProfile } from "../hooks/useProfile";
 import { useBackgroundContext } from "../App";
 import { imageWallpapers, specialAndVideoWallpapers, darkGradientWallpapers } from "../data/wallpapers";
 
 export function Settings() {
   const { isDark, toggleDark } = useDarkMode();
-  const { profile, updateProfile } = useProfile();
   const { background, backgroundType, cardOpacity, setBackgroundSetting, setCardOpacity } = useBackgroundContext();
   
-  // Profile edit states
-  const [profileName, setProfileName] = useState(profile.name);
-  const [profileBio, setProfileBio] = useState(profile.bio);
-  const [profileAvatar, setProfileAvatar] = useState(profile.avatar);
-  const [profileTwitter, setProfileTwitter] = useState(profile.twitter || "");
-  const [profileInstagram, setProfileInstagram] = useState(profile.instagram || "");
-  const [isSaved, setIsSaved] = useState(false);
-
   const [localStorageData, setLocalStorageData] = useState<{ key: string; value: string }[]>([]);
   const [storageSize, setStorageSize] = useState<string>("0 KB");
 
@@ -42,31 +32,6 @@ export function Settings() {
     loadStorageData();
   }, [isDark]);
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileAvatar(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateProfile({
-      name: profileName,
-      bio: profileBio,
-      avatar: profileAvatar,
-      twitter: profileTwitter,
-      instagram: profileInstagram,
-    });
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
-    loadStorageData();
-  };
-
   const clearStorage = () => {
     if (window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu cài đặt? Hành động này không thể hoàn tác.")) {
       const keysToRemove: string[] = [];
@@ -90,112 +55,16 @@ export function Settings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-8 animate-fade-in text-left">
       <header className="border-b border-[#edebe9] dark:border-[#484644] pb-6 mb-8">
         <div className="flex items-center gap-3 mb-2">
           <SettingsIcon className="h-8 w-8 text-[#0078d4]" />
           <h1 className="text-3xl font-black">Cài đặt</h1>
         </div>
         <p className="text-slate-500 dark:text-slate-400 font-medium">
-          Quản lý cấu hình ứng dụng, hồ sơ tác giả và dữ liệu lưu trữ cục bộ (Local Storage).
+          Quản lý cấu hình ứng dụng, hình nền giao diện và dữ liệu lưu trữ cục bộ (Local Storage).
         </p>
       </header>
-
-      {/* Edit Profile Section */}
-      <section className="liquid-glass border border-[#edebe9] dark:border-[#484644] rounded-xl overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-[#edebe9] dark:border-[#484644] bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
-          <h2 className="font-bold flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Hồ sơ tác giả (Profile)
-          </h2>
-        </div>
-        <form onSubmit={handleSaveProfile} className="p-6 space-y-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Left side: Avatar photo upload preview */}
-            <div className="flex flex-col items-center gap-3 w-full md:w-1/4">
-              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Ảnh đại diện</span>
-              <div className="relative w-32 h-32 rounded-full overflow-hidden border border-[#edebe9] dark:border-[#484644] group bg-slate-100/50 dark:bg-slate-800/50 flex items-center justify-center shadow-inner">
-                {profileAvatar ? (
-                  <img src={profileAvatar} alt={profileName} className="w-full h-full object-cover" />
-                ) : (
-                  <User className="h-12 w-12 text-slate-300 dark:text-slate-600" />
-                )}
-                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white cursor-pointer transition-opacity duration-200">
-                  <Upload className="h-5 w-5 mb-1" />
-                  <span className="text-[10px] font-bold">Thay ảnh</span>
-                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-                </label>
-              </div>
-              <p className="text-slate-400 dark:text-slate-500 text-[10px] text-center font-medium">Hỗ trợ JPG, PNG, GIF</p>
-            </div>
-
-            {/* Right side: Input fields */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Tên hiển thị</label>
-                <input 
-                  type="text" 
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#292827] focus:outline-none focus:ring-2 focus:ring-[#0078d4]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Mô tả tiểu sử (Bio)</label>
-                <textarea 
-                  value={profileBio}
-                  onChange={(e) => setProfileBio(e.target.value)}
-                  rows={3}
-                  className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#292827] focus:outline-none focus:ring-2 focus:ring-[#0078d4]"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Twitter Username</label>
-                  <input 
-                    type="text" 
-                    value={profileTwitter}
-                    placeholder="@username"
-                    onChange={(e) => setProfileTwitter(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#292827] focus:outline-none focus:ring-2 focus:ring-[#0078d4]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Instagram Username</label>
-                  <input 
-                    type="text" 
-                    value={profileInstagram}
-                    placeholder="@username"
-                    onChange={(e) => setProfileInstagram(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#292827] focus:outline-none focus:ring-2 focus:ring-[#0078d4]"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-[#edebe9] dark:border-[#484644] pt-4 flex items-center justify-between">
-            {isSaved ? (
-              <span className="text-emerald-500 dark:text-emerald-400 font-bold text-sm flex items-center gap-1.5 animate-bounce">
-                <CheckCircle className="h-4 w-4" />
-                Đã lưu hồ sơ thành công!
-              </span>
-            ) : (
-              <span className="text-slate-400 dark:text-slate-500 text-xs font-semibold">Nhấn "Lưu thay đổi" để áp dụng profile mới</span>
-            )}
-            <button
-              type="submit"
-              className="px-5 py-2 bg-[#0078d4] hover:bg-[#106ebe] text-white rounded-lg font-bold transition-colors shadow-sm text-sm"
-            >
-              Lưu thay đổi
-            </button>
-          </div>
-        </form>
-      </section>
 
       {/* Background Settings */}
       <section className="liquid-glass border border-[#edebe9] dark:border-[#484644] rounded-xl overflow-hidden shadow-sm">
@@ -229,7 +98,7 @@ export function Settings() {
             <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
               {imageWallpapers.map((url, i) => (
                 <button key={i} onClick={() => setBackgroundSetting('image', url)} className={`aspect-square rounded-md overflow-hidden border-2 ${background === url ? 'border-[#0078d4]' : 'border-transparent'}`}>
-                  <img src={url} alt={`Wallpaper ${i}`} className="w-full h-full object-cover" />
+                  <img src={url} alt={`Wallpaper ${i}`} className="w-full h-full object-cover animate-fade-in" />
                 </button>
               ))}
             </div>
@@ -339,7 +208,7 @@ export function Settings() {
           <div className="px-6 py-4 border-t border-[#edebe9] dark:border-[#484644] bg-slate-50 dark:bg-slate-800/20">
             <button
               onClick={clearStorage}
-              className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg font-medium transition-colors text-sm ml-auto shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg font-medium transition-colors text-sm ml-auto shadow-sm cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
               Xóa tất cả dữ liệu

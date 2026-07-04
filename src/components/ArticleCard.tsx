@@ -4,7 +4,8 @@ import type { Article } from "../data/articles";
 import { cn } from "../lib/utils";
 import { FadeImage } from "./FadeImage";
 import { useBookmarks } from "../hooks/useBookmarks";
-import { Bookmark, Clock, ArrowRight } from "lucide-react";
+import { useArticles } from "../hooks/useArticles";
+import { Bookmark, Clock, ArrowRight, Pencil, Trash2 } from "lucide-react";
 
 interface ArticleCardProps {
   article: Article;
@@ -14,6 +15,7 @@ interface ArticleCardProps {
 
 export function ArticleCard({ article, featured = false, index }: ArticleCardProps) {
   const { isBookmarked, toggleBookmark } = useBookmarks();
+  const { deleteArticle } = useArticles();
   const bookmarked = isBookmarked(article.id);
 
   return (
@@ -117,7 +119,7 @@ export function ArticleCard({ article, featured = false, index }: ArticleCardPro
         </p>
         
         {/* Author Footer */}
-        <div className="mt-auto pt-5 border-t border-[#edebe9]/60 dark:border-[#484644]/60 flex items-center justify-between">
+        <div className="mt-auto pt-5 border-t border-[#edebe9]/60 dark:border-[#484644]/60 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <FadeImage 
               src={article.author.avatar} 
@@ -126,18 +128,44 @@ export function ArticleCard({ article, featured = false, index }: ArticleCardPro
               className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800"
             />
             <div className="flex flex-col text-left">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{article.author.name}</span>
+              <span className="text-xs font-bold text-[#323130] dark:text-[#f3f2f1]">{article.author.name}</span>
               <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Tác giả</span>
             </div>
           </div>
 
-          <Link 
-            to={`/post/${article.slug}`}
-            className="flex items-center gap-1 text-xs font-black uppercase tracking-wider text-[#0078d4] dark:text-[#2899f5] hover:text-[#005a9e] dark:hover:text-[#106ebe] transition-colors group/link"
-          >
-            <span>Đọc tiếp</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" />
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* Sửa / Edit */}
+            <Link 
+              to={`/write?edit=${article.id}`}
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-500 hover:text-[#0078d4] dark:hover:text-[#2899f5] transition-colors cursor-pointer"
+              title="Chỉnh sửa bài viết"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Pencil className="h-4 w-4" />
+            </Link>
+            {/* Xóa / Delete */}
+            <button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (window.confirm(`Bạn có chắc chắn muốn xóa bài viết "${article.title}"?`)) {
+                  deleteArticle(article.id);
+                }
+              }}
+              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
+              title="Xóa bài viết"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            
+            <Link 
+              to={`/post/${article.slug}`}
+              className="flex items-center gap-1 text-xs font-black uppercase tracking-wider text-[#0078d4] dark:text-[#2899f5] hover:text-[#005a9e] dark:hover:text-[#106ebe] transition-colors group/link ml-2"
+            >
+              <span>Đọc tiếp</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/link:translate-x-1" />
+            </Link>
+          </div>
         </div>
       </div>
     </motion.article>

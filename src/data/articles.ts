@@ -17,6 +17,7 @@ export interface Article {
   author: Author;
   tags: string[];
   content?: string; // We'll use components for the actual content rendering in the Post view, but this could hold markdown
+  collectionId?: string;
 }
 
 export const defaultAuthor: Author = {

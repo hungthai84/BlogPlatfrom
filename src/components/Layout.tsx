@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -30,10 +30,9 @@ import {
   Settings as SettingsIcon
 } from "lucide-react";
 import { useDarkMode } from "../hooks/useDarkMode";
-import { useProfile } from "../hooks/useProfile";
 import { useBookmarks } from "../hooks/useBookmarks";
 import { SearchOverlay } from "./SearchOverlay";
-import { articles } from "../data/articles";
+import { useArticles } from "../hooks/useArticles";
 import { useBackgroundContext } from "../App";
 
 interface LayoutProps {
@@ -43,11 +42,27 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { isDark, toggleDark } = useDarkMode();
   const { bookmarks } = useBookmarks();
-  const { profile } = useProfile();
+  const { articles } = useArticles();
   const { background, backgroundType, cardOpacity } = useBackgroundContext();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Search Bar States
+  const [headerSearchQuery, setHeaderSearchQuery] = useState("");
+  const [isHeaderSearchFocused, setIsHeaderSearchFocused] = useState(false);
+  const headerSearchRef = useRef<HTMLDivElement>(null);
+
+  // Click outside listener for header search dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (headerSearchRef.current && !headerSearchRef.current.contains(event.target as Node)) {
+        setIsHeaderSearchFocused(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Top Notification Bar State
   const [showNotification, setShowNotification] = useState(() => {
@@ -225,20 +240,20 @@ export function Layout({ children }: LayoutProps) {
                 </div>
 
                 <div className="pt-6 border-t border-[#edebe9] dark:border-[#484644] flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-left">
-                    <img 
-                      src={profile.avatar}
-                      alt={profile.name} 
-                      className="h-10 w-10 rounded-full border border-slate-200 dark:border-slate-700 object-cover"
-                    />
+                  <Link 
+                    to="/settings" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 text-left hover:text-[#0078d4] dark:hover:text-[#2899f5] transition-colors"
+                  >
+                    <SettingsIcon className="h-6 w-6 text-slate-400" />
                     <div>
-                      <p className="text-sm font-black text-slate-900 dark:text-white">{profile.name}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{profile.bio}</p>
+                      <p className="text-sm font-black text-slate-900 dark:text-white">Cấu hình hệ thống</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">Mở trang cài đặt</p>
                     </div>
-                  </div>
+                  </Link>
                   <button 
                     onClick={toggleDark}
-                    className="p-2.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-[#0078d4] dark:hover:text-[#2899f5]"
+                    className="p-2.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-[#0078d4] dark:hover:text-[#2899f5] cursor-pointer"
                   >
                     {isDark ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5" />}
                   </button>
@@ -300,14 +315,88 @@ export function Layout({ children }: LayoutProps) {
             {/* Header Right: Profile link */}
             <div className="flex items-center gap-2 sm:gap-3">
               
-              {/* Search Overlay trigger */}
-              <button 
-                onClick={() => setIsSearchOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 bg-slate-100/60 dark:bg-slate-800/40 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 border border-[#edebe9]/30 dark:border-[#484644]/30 transition-all text-xs cursor-pointer"
-              >
-                <Search className="h-4 w-4" />
-                <span className="hidden lg:inline text-slate-400 font-semibold">Tìm kiếm...</span>
-              </button>
+              {/* Interactive Search Bar in Header */}
+              <div className="relative" ref={headerSearchRef}>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-100/60 dark:bg-slate-800/40 border border-[#edebe9]/30 dark:border-[#484644]/30 focus-within:ring-2 focus-within:ring-[#0078d4] dark:focus-within:ring-[#2899f5] transition-all">
+                  <Search className="h-4 w-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Tìm bài viết, nhãn..." 
+                    value={headerSearchQuery}
+                    onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                    onFocus={() => setIsHeaderSearchFocused(true)}
+                    className="bg-transparent border-none outline-none text-xs text-[#323130] dark:text-[#ffffff] placeholder:text-slate-400 w-24 sm:w-36 md:w-44 lg:w-48 transition-all"
+                  />
+                  {headerSearchQuery && (
+                    <button 
+                      onClick={() => setHeaderSearchQuery("")}
+                      className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full cursor-pointer"
+                    >
+                      <X className="h-3 w-3 text-slate-400" />
+                    </button>
+                  )}
+                </div>
+
+                <AnimatePresence>
+                  {isHeaderSearchFocused && headerSearchQuery.trim().length > 1 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-h-96 overflow-y-auto bg-white dark:bg-[#292827] border border-[#edebe9] dark:border-[#484644] rounded-lg shadow-2xl z-50 p-2 text-left"
+                    >
+                      <div className="text-[10px] uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 px-3 py-1.5 font-mono">
+                        Kết quả ({
+                          articles.filter(art => 
+                            art.title.toLowerCase().includes(headerSearchQuery.toLowerCase()) ||
+                            art.tags.some(tag => tag.toLowerCase().includes(headerSearchQuery.toLowerCase()))
+                          ).length
+                        })
+                      </div>
+                      <div className="divide-y divide-[#edebe9]/50 dark:divide-[#484644]/50">
+                        {(() => {
+                          const filtered = articles.filter(art => 
+                            art.title.toLowerCase().includes(headerSearchQuery.toLowerCase()) ||
+                            art.tags.some(tag => tag.toLowerCase().includes(headerSearchQuery.toLowerCase()))
+                          );
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="p-4 text-xs text-center text-slate-400 dark:text-slate-500 font-semibold">
+                                Không tìm thấy kết quả nào phù hợp.
+                              </div>
+                            );
+                          }
+                          return filtered.map((art) => (
+                            <Link
+                              key={art.id}
+                              to={`/post/${art.slug}`}
+                              onClick={() => {
+                                setHeaderSearchQuery("");
+                                setIsHeaderSearchFocused(false);
+                              }}
+                              className="block p-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-md transition-colors"
+                            >
+                              <div className="flex flex-wrap gap-1 mb-1">
+                                {art.tags.slice(0, 2).map(tag => (
+                                  <span key={tag} className="text-[9px] font-black uppercase text-[#0078d4] dark:text-[#2899f5] tracking-wider">
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="text-xs font-bold text-slate-800 dark:text-white line-clamp-1 block">
+                                {art.title}
+                              </span>
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 block">
+                                {art.excerpt}
+                              </span>
+                            </Link>
+                          ));
+                        })()}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Bookmarks Overlay indicator */}
               <Link 
@@ -330,13 +419,9 @@ export function Layout({ children }: LayoutProps) {
                 {isDark ? <Sun className="h-5 w-5 text-amber-500 animate-spin-slow" /> : <Moon className="h-5 w-5 text-blue-600" />}
               </button>
               
-              {/* mini profile photo */}
-              <Link to="/settings" title="Cài đặt">
-                <img 
-                  src={profile.avatar}
-                  alt={profile.name} 
-                  className="h-8 w-8 rounded-full border border-[#edebe9] dark:border-[#484644] hover:border-[#0078d4] dark:hover:border-[#2899f5] object-cover cursor-pointer transition-all"
-                />
+              {/* Settings Link */}
+              <Link to="/settings" title="Cài đặt" className="p-2 rounded-md text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-center">
+                <SettingsIcon className="h-5 w-5" />
               </Link>
             </div>
           </header>
@@ -369,7 +454,7 @@ export function Layout({ children }: LayoutProps) {
               <span>PLUS <span className="text-[#0078d4] dark:text-[#2899f5]">UI</span> BLOG</span>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">
-              © {new Date().getFullYear()} {profile.name}. Giao diện được thiết kế hoàn thiện theo phong cách Plus UI Blogger Template danh tiếng.
+              © {new Date().getFullYear()} Plus UI Blog. Giao diện được thiết kế hoàn thiện theo phong cách Plus UI Blogger Template danh tiếng.
             </p>
           </div>
 

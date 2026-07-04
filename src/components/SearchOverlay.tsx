@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { articles } from "../data/articles";
+import { useArticles } from "../hooks/useArticles";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -11,6 +11,7 @@ interface SearchOverlayProps {
 
 export function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [query, setQuery] = useState("");
+  const { articles } = useArticles();
   
   useEffect(() => {
     if (isOpen) {

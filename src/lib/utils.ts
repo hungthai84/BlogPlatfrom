@@ -7,9 +7,9 @@ export function cn(...inputs: ClassValue[]) {
 
 export function calculateReadingTime(content: string = ""): string {
   const wordsPerMinute = 200;
-  const wordCount = content.split(/\s+/).length;
+  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
   const minutes = Math.ceil(wordCount / wordsPerMinute);
-  return `${minutes} min read`;
+  return `${minutes} phút đọc`;
 }
 
 export interface TocHeading {

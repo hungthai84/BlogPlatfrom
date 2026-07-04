@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { articles } from "../data/articles";
+import { useArticles } from "../hooks/useArticles";
 import { ArticleCard } from "../components/ArticleCard";
 import { FeaturedCarousel } from "../components/FeaturedCarousel";
 import { PopularPosts } from "../components/PopularPosts";
@@ -15,6 +15,7 @@ import { useBookmarks } from "../hooks/useBookmarks";
 import { Link } from "react-router-dom";
 
 export function Home() {
+  const { articles } = useArticles();
   const { bookmarks } = useBookmarks();
   const allTags = ["Tất cả", ...Array.from(new Set(articles.flatMap(a => a.tags)))];
   const [selectedCategory, setSelectedCategory] = useState("Tất cả");

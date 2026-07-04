@@ -1,7 +1,7 @@
 import { useParams, Navigate, Link } from "react-router-dom";
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
 import MDEditor from '@uiw/react-md-editor';
-import { articles } from "../data/articles";
+import { useArticles } from "../hooks/useArticles";
 import { AuthorInfo } from "../components/AuthorInfo";
 import { FadeImage } from "../components/FadeImage";
 import { Comments } from "../components/Comments";
@@ -44,12 +44,15 @@ interface Comment {
 
 export function Post() {
   const { slug } = useParams<{ slug: string }>();
+  const { articles } = useArticles();
   const article = articles.find((a) => a.slug === slug);
   const articleIndex = articles.findIndex((a) => a.slug === slug);
 
   const { isBookmarked, toggleBookmark } = useBookmarks();
   const [copied, setCopied] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
   
   const readingTime = calculateReadingTime(article?.content);
   const toc = generateToc(article?.content);
@@ -67,23 +70,40 @@ export function Post() {
   const [speed, setSpeed] = useState<number>(1.0);
   const speedOptions = [0.75, 1.0, 1.25, 1.5, 2.0];
 
+  // Click outside listener for share dropdown
   useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (shareRef.current && !shareRef.current.contains(event.target as Node)) {
+        setIsShareOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (!mainElement) return;
+
     const handleScroll = () => {
-      const totalScroll = document.documentElement.scrollTop;
-      const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const progress = (totalScroll / windowHeight) * 100;
+      const totalScroll = mainElement.scrollTop;
+      const scrollHeight = mainElement.scrollHeight - mainElement.clientHeight;
+      const progress = scrollHeight > 0 ? (totalScroll / scrollHeight) * 100 : 0;
       setReadingProgress(progress);
 
       // Show/hide floating TOC toggle button
-      if (window.scrollY > 400) {
+      if (totalScroll > 400) {
         setShowFloatingTocButton(true);
       } else {
         setShowFloatingTocButton(false);
       }
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+
+    mainElement.addEventListener("scroll", handleScroll);
+    handleScroll(); // initial sync
+
+    return () => mainElement.removeEventListener("scroll", handleScroll);
+  }, [article]);
 
   // Set up headings observer for Table of Contents
   useEffect(() => {
@@ -325,10 +345,7 @@ export function Post() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Setup reading progress indicator
-  const { scrollYProgress } = useScroll();
-  const scaleX = useTransform(scrollYProgress, [0, 1], [0, 1]);
-
+  // Setup reading progress indicator - using main container scroll
   if (!article) {
     return <Navigate to="/" replace />;
   }
@@ -342,10 +359,10 @@ export function Post() {
   return (
     <div className="relative">
       
-      {/* 1. STICKY READING PROGRESS BAR (rtB Spec) */}
-      <motion.div 
-        style={{ scaleX }}
-        className="fixed top-16 left-0 right-0 h-1 bg-[#0078d4] dark:bg-[#2899f5] origin-left z-40"
+      {/* 1. STICKY READING PROGRESS BAR (rtB Spec) - Fills up based on actual scroll position in post view */}
+      <div 
+        className="fixed top-16 left-0 right-0 h-1 bg-[#0078d4] dark:bg-[#2899f5] z-40 transition-all duration-75"
+        style={{ width: `${readingProgress}%`, transformOrigin: "left" }}
       />
 
       <div className="mx-auto max-w-7xl">
@@ -360,7 +377,7 @@ export function Post() {
             <span className="text-slate-800 dark:text-slate-200 font-bold truncate max-w-[200px]">{article.title}</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" ref={shareRef}>
             <button 
               onClick={() => toggleBookmark(article.id)}
               className={`p-2 px-3.5 rounded-md border border-[#edebe9] dark:border-[#484644] flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
@@ -373,13 +390,92 @@ export function Post() {
               <span>{bookmarked ? "Đã lưu" : "Lưu bài viết"}</span>
             </button>
 
-            <button 
-              onClick={handleShare}
-              className="p-2 px-3.5 rounded-md border border-[#edebe9] dark:border-[#484644] bg-white dark:bg-[#292827] text-slate-600 dark:text-slate-400 hover:text-[#0078d4] dark:hover:text-[#2899f5] hover:scale-102 flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>Chia sẻ</span>
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsShareOpen(!isShareOpen)}
+                className="p-2 px-3.5 rounded-md border border-[#edebe9] dark:border-[#484644] bg-white dark:bg-[#292827] text-slate-600 dark:text-slate-400 hover:text-[#0078d4] dark:hover:text-[#2899f5] hover:scale-102 flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+              >
+                <Share2 className="h-4 w-4" />
+                <span>Chia sẻ</span>
+              </button>
+
+              <AnimatePresence>
+                {isShareOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-64 rounded-md bg-white dark:bg-[#292827] border border-[#edebe9] dark:border-[#484644] shadow-xl z-50 p-2 text-left"
+                  >
+                    <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 font-mono">
+                      Chia sẻ bài viết
+                    </div>
+                    <div className="space-y-1">
+                      {navigator.share && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await navigator.share({
+                                title: article.title,
+                                text: article.excerpt,
+                                url: window.location.href,
+                              });
+                            } catch (err) {
+                              console.error("Web Share API error:", err);
+                            }
+                            setIsShareOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-[#0078d4] dark:text-[#2899f5] hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-md transition-all cursor-pointer text-left"
+                        >
+                          <Share2 className="h-4 w-4 text-[#0078d4] dark:text-[#2899f5]" />
+                          <span>Giao diện hệ thống</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          handleCopyLink();
+                          setIsShareOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-md transition-all cursor-pointer"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4 text-slate-400" />}
+                          <span>Sao chép liên kết</span>
+                        </span>
+                        {copied && <span className="text-[10px] text-emerald-500 font-mono">Đã chép!</span>}
+                      </button>
+
+                      <a
+                        href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsShareOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-md transition-all block text-left"
+                      >
+                        <svg className="h-4 w-4 text-slate-400 fill-current shrink-0" viewBox="0 0 24 24">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                        <span>Chia sẻ lên Twitter / X</span>
+                      </a>
+
+                      <a
+                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsShareOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-md transition-all block text-left"
+                      >
+                        <svg className="h-4 w-4 text-slate-400 fill-current shrink-0" viewBox="0 0 24 24">
+                          <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.75z" />
+                        </svg>
+                        <span>Chia sẻ lên Facebook</span>
+                      </a>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -409,7 +505,12 @@ export function Post() {
             <div className="mt-4 flex items-center gap-3.5 text-xs text-slate-300 font-bold uppercase tracking-wider">
               <span>{article.date}</span>
               <span className="h-1.5 w-1.5 rounded-full bg-[#0078d4]" />
-              <span className="font-mono">{article.readTime} đọc</span>
+              <span className="font-mono flex items-center gap-1">
+                <svg className="h-3.5 w-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Ước tính: {readingTime}</span>
+              </span>
             </div>
           </div>
         </div>
